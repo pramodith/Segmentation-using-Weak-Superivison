@@ -29,7 +29,7 @@ class Module(nn.Module):
 
         #Segmentation layer of https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Pinheiro_
         # From_Image-Level_to_2015_CVPR_paper.pdf
-        self.seg_conv1 = nn.Conv2d(in_channels=1024,out_channels=1024, kernel_size=3, stride=1)
+        self.seg_conv1 = nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1)
         self.seg_conv2 = nn.Conv2d(in_channels=1024, out_channels=768, kernel_size=3, stride=1)
         self.seg_conv3 = nn.Conv2d(in_channels=768, out_channels=512, kernel_size=1, stride=1)
         self.seg_conv4 = nn.Conv2d(in_channels=512, out_channels=2, kernel_size=1, stride=1)
@@ -62,30 +62,31 @@ class Module(nn.Module):
         score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
         return score
 
-    def train_model(self, mode=True, epochs=5, lr=0.001, momentum=0.9, weight_decay=0.00005):
+    def train_model(self, mode=True, epochs=5, lr=0.00001, momentum=0.9, weight_decay=0.00005):
         loss = nn.CrossEntropyLoss()
         batch_loss_histroy = []
         total_loss = 0
-        optimizer = optim.SGD(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+        optimizer = optim.RMSprop(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", is_train = True)
         batch_size = 16
         num_workers = 1
         best_loss = sys.maxsize
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
         for epoch in range(epochs):
+            print("Epoch is " + str(epoch))
             self.train()
             total_loss = 0
             for i, batch in enumerate(loader):
                 images = batch[0]
                 labels = batch[1]
                 score = self.forward(images)
-                output = loss(score,labels)
+                output = loss(score, labels)
                 output.backward()
                 optimizer.step()
                 total_loss += output.item()
                 if i % 50 == 0:
                     batch_loss_histroy.append(output.item())
-                    print(total_loss)
+                    print("Loss: for batch " + str(i) + " is " + str(total_loss))
                     total_loss = 0
                 del output
 
@@ -106,7 +107,7 @@ class Module(nn.Module):
                     total_dev_loss += output.item()
                     del output
                     if i % 50 == 0:
-                        print("Validation loss is " + str(total_dev_loss))
+                        print("Validation Loss: for batch " + str(i) + "is " + str(total_dev_loss))
                         total_dev_loss = 0
 
 
