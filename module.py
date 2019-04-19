@@ -50,15 +50,16 @@ class Module(nn.Module):
         self.softmax = nn.Softmax()
 
     def forward(self, input):
-        img,label = input[0],input[1]
-        feature_map = self.overfeat(img)
-        exp_sum = torch.sum(torch.exp(self.hyp*feature_map),1)
-        #aggregate score for each class
+        feature_map = self.overfeat(input)
+        # summing across rows and columns
+        exp_sum = torch.sum(torch.sum(torch.exp(self.hyp*feature_map), 1), 1)
+        # aggregate score for each class
         score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
-        return feature_map
+        return score
 
     def train(self, mode=True,epochs=20):
         loss = nn.CrossEntropyLoss()
+        total_loss = 0
         optimizer = optim.SGD(self.parameters(),lr=0.001, momentum=0.9, weight_decay=0.00005)
         data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver")
         batch_size = 1
@@ -66,8 +67,10 @@ class Module(nn.Module):
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
         for epoch in range(epochs):
             for i,batch in enumerate(loader):
-                score = self.forward(batch)
-                output = loss(score,batch[1])
+                images = batch[0]
+                labels = batch[1]
+                score = self.forward(images)
+                output = loss(score,labels)
                 output.backward()
                 optimizer.step()
                 total_loss += output
