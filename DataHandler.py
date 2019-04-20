@@ -59,9 +59,9 @@ class DataHandler(Dataset):
         dataset_std = [0.0909427 * 255, 0.0954222 * 255, 0.01157272 * 255]
         transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
-            transforms.Normalize(mean = [0.0014861894323434117], std=[0.0020256241244931863]),
             transforms.RandomRotation(360),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.0014861894323434117], std=[0.0020256241244931863])
         ])
         return transform
 
