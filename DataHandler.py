@@ -4,6 +4,7 @@ import os
 from PIL import Image
 from torchvision import transforms
 import numpy as np
+import torch
 
 class DataHandler(Dataset):
 
@@ -58,6 +59,7 @@ class DataHandler(Dataset):
         dataset_std = [0.0909427 * 255, 0.0954222 * 255, 0.01157272 * 255]
         transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
+            transforms.Normalize(mean = [0.0014861894323434117], std=[0.0020256241244931863]),
             transforms.RandomRotation(360),
             transforms.ToTensor()
         ])
@@ -93,10 +95,16 @@ class DataHandler(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    pass
-    data_handler = DataHandler("../test256","images_pngs_liver","images_pngs_noliver",'test',"images_pngs","masks_pngs")
-    batch_size = 1
+    data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver",'train',"images_pngs","masks_pngs")
+    batch_size = 128
     num_workers = 1
     loader = DataLoader(data_handler,batch_size,True,num_workers=num_workers,pin_memory=True)
-    for img,label in loader:
-        print('Hi')
+    sum = []
+    std = []
+    for i,batch in enumerate(loader):
+        print(i)
+        sum.append(torch.mean(batch[0]).item())
+        std.append(torch.std(batch[0]).item())
+    mean = np.mean(sum)/128
+    std = np.mean(std)/128
+    print(mean)
