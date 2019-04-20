@@ -72,7 +72,7 @@ class Module(nn.Module):
         if torch.cuda.is_available():
             self.cuda()
         loss = nn.CrossEntropyLoss()
-        optimizer = optim.RMSprop(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+        optimizer = optim.SGD(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         # Instantiate data handler and loader to efficiently create batches
         data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", is_train = True)
         num_workers = 1
@@ -140,11 +140,11 @@ class Module(nn.Module):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lr', action="store", default=0.000001, type=float,
+    parser.add_argument('--lr', action="store", default=0.00001, type=float,
                         help='The learning rate of the network')
-    parser.add_argument('--batch_size', action='store', type=int, default=32,
+    parser.add_argument('--batch_size', action='store', type=int, default=64,
                         help="The learning rate of the last layer of the SRCNN")
-    parser.add_argument('--epochs', action='store', type=int, default=100)
+    parser.add_argument('--epochs', action='store', type=int, default=50)
     parser.add_argument('--momentum', action='store', type=float, default=0.9)
     parser.add_argument('--save_dir', action='store', type=str, default='saved_weights')
     parser.add_argument('--train_dir', action='store', type=str,default="../train256")
