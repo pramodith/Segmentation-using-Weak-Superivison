@@ -47,21 +47,30 @@ class Module(nn.Module):
                                       self.conv_2,
                                       self.maxpool_2, nn.ReLU(),
                                       self.conv_3,nn.ReLU(),
-                                      #nn.BatchNorm2d(512),
+                                      nn.BatchNorm2d(512),
                                       self.conv_4,nn.ReLU(),
                                       self.conv_5,nn.ReLU(),
                                       self.conv_6,
                                       self.maxpool_3,nn.ReLU(),
-                                      #nn.BatchNorm2d(1024),
+                                      nn.BatchNorm2d(1024),
                                       self.seg_conv1,nn.ReLU(),
                                       nn.Dropout(),
                                       self.seg_conv2,nn.ReLU(),
                                       nn.Dropout(),
-                                      #nn.BatchNorm2d(768),
+                                      nn.BatchNorm2d(768),
                                       self.seg_conv3,nn.ReLU(),
                                       nn.Dropout(),
                                       self.seg_conv4)
         self.softmax = nn.Softmax()
+
+        #initialize convolutional layers with Xavier initialization
+        self.init_weights()
+
+    # Initializes convolutional layers with Xavier initialization
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform(m.weight)
 
     def load_model(self,weights_path):
         self.load_state_dict(torch.load(weights_path))
@@ -75,7 +84,7 @@ class Module(nn.Module):
         score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
         return score
 
-    def train_model(self, train_dir, batch_size=16, epochs=5, lr=0.000001, momentum=0.9, weight_decay=0.00005):
+    def train_model(self, train_dir, batch_size=16, epochs=5, lr=0.0001, momentum=0.9, weight_decay=0.00005):
         if torch.cuda.is_available():
             self.cuda()
         loss = nn.CrossEntropyLoss()
@@ -124,6 +133,8 @@ class Module(nn.Module):
             dev_loader = DataLoader(dev_data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
             total_dev_loss = 0
             # Ensure that gradients aren't computed
+            ground_truth = []
+            predictions = []
             with torch.no_grad():
                 for i, batch in enumerate(dev_loader):
                     images = batch[0]
@@ -133,9 +144,14 @@ class Module(nn.Module):
                         labels = labels.cuda()
                     score = self.forward(images)
                     output = loss(score, labels)
+                    ground_truth.extend(list(labels.cpu().detach().numpy()))
+                    predictions.extend(list(torch.argmax(F.softmax(score), 1).cpu().detach().numpy()))
                     total_dev_loss += output.item()
                     del output
             print("Validation loss is " +str(total_dev_loss))
+            print("F1-score is " + str(f1_score(ground_truth, predictions)))
+            print("Accuracy is " + str(accuracy_score(ground_truth, predictions)))
+
             if total_dev_loss < best_dev_loss:
                 best_dev_loss = total_dev_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir, "dev_weights_epoch_" + str(epoch) + ".pt"))
@@ -160,15 +176,18 @@ class Module(nn.Module):
                 predicted_labels.extend(list(torch.argmax(probs,1).cpu().detach().numpy()))
                 ground_truth.extend(list(labels.detach().numpy()))
 
-        print("F1-score is "+ str(f1_score(ground_truth,predicted_labels)))
-        print("Accuracy is "+ str(accuracy_score(ground_truth,predicted_labels)))
+        print("F1-score is "+ str(f1_score(ground_truth, predicted_labels)))
+        print("Accuracy is "+ str(accuracy_score(ground_truth, predicted_labels)))
+
+    def post_processing(self):
+        pass
 
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lr', action="store", default=0.00001, type=float,
+    parser.add_argument('--lr', action="store", default=0.0001, type=float,
                         help='The learning rate of the network')
     parser.add_argument('--batch_size', action='store', type=int, default=64,
                         help="The learning rate of the last layer of the SRCNN")
@@ -179,7 +198,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
-    obj.load_model("saved_weights/weights_epoch_6.pt")
-    obj.predict()
+    #obj.load_model("saved_weights/weights_epoch_6.pt")
+    #obj.predict()
     #print(summary(obj, (1, 256, 256)))
-    #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
