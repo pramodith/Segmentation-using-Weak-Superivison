@@ -105,7 +105,7 @@ class Module(nn.Module):
             # Store the model corresponding to the least loss
             if total_loss < best_loss:
                 best_loss = total_loss
-                torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+"_"+str(batch)+".pt"))
+                torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+"_"+str(i)+".pt"))
 
             # Check the loss on the validation set, set to eval mode to ensure Dropout behaves correctly
             self.eval()
