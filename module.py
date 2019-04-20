@@ -156,8 +156,8 @@ class Module(nn.Module):
                 best_dev_loss = total_dev_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir, "dev_weights_epoch_" + str(epoch) + ".pt"))
 
-    def predict(self):
-        data_handler = DataHandler("../test256", "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
+    def predict(self,test_dir):
+        data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
                                    "masks_pngs")
         batch_size = 8
         num_workers = 1
@@ -195,10 +195,10 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', action='store', type=float, default=0.9)
     parser.add_argument('--save_dir', action='store', type=str, default='saved_weights')
     parser.add_argument('--train_dir', action='store', type=str,default="../train256")
-
+    parser.add_argument('--test_dir', action='store', type=str, default="../train256")
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
     obj.load_model("saved_weights/weights_epoch_13.pt")
-    obj.predict()
+    obj.predict(args.test_dir)
     #print(summary(obj, (1, 256, 256)))
     #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
