@@ -70,7 +70,7 @@ class Module(nn.Module):
     def init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.xavier_uniform(m.weight)
+                nn.init.xavier_uniform_(m.weight)
 
     def load_model(self,weights_path):
         self.load_state_dict(torch.load(weights_path))
@@ -103,6 +103,7 @@ class Module(nn.Module):
             self.train()
             total_loss = 0
             batch_total_loss = 0
+            '''
             for i, batch in enumerate(loader):
                 images = batch[0]
                 labels = batch[1]
@@ -120,12 +121,13 @@ class Module(nn.Module):
                     print("Loss: for batch " + str(i) + " is " + str(batch_total_loss))
                     batch_total_loss = 0
                 del output
+            
             print("Training loss is " + str(total_loss))
             # Store the model corresponding to the least loss
             if total_loss < best_loss:
                 best_loss = total_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+".pt"))
-
+            '''
             # Check the loss on the validation set, set to eval mode to ensure Dropout behaves correctly
             self.eval()
             # Create data handler and data loader for validation set.
