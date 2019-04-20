@@ -22,7 +22,7 @@ class DataHandler(Dataset):
             positive_files = [os.path.join(self.positive_img_dir, positive_files[i]) for i in
                               range(len(positive_files) * 4 // 5, len(positive_files))]
             negative_files = [os.path.join(self.negative_img_dir, negative_files[i]) for i in
-                              range(len(negative_files) * 4 // 5, len(positive_files))]
+                              range(len(negative_files) * 4 // 5, len(negative_files))]
         # Assign label 0 to negative images and label 1 to positive images
         self.labels = [0 for _ in range(len(positive_files))] + ([1 for _ in range(len(negative_files))])
         self.file_names = positive_files + negative_files
@@ -54,7 +54,7 @@ class DataHandler(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver")
+    data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver",False)
     batch_size = 8
     num_workers = 1
     loader = DataLoader(data_handler,batch_size,True,num_workers=num_workers,pin_memory=True)

@@ -5,6 +5,7 @@ from DataHandler import DataHandler
 from torch.utils.data.dataloader import DataLoader
 import sys
 import os
+import argparse
 #from torchsummary import summary
 
 class Module(nn.Module):
@@ -64,24 +65,24 @@ class Module(nn.Module):
         score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
         return score
 
-    def train_model(self, epochs=5, lr=0.000001, momentum=0.9, weight_decay=0.00005):
+    def train_model(self, train_dir, batch_size=16, epochs=5, lr=0.000001, momentum=0.9, weight_decay=0.00005):
         if torch.cuda.is_available():
             self.cuda()
         loss = nn.CrossEntropyLoss()
         optimizer = optim.RMSprop(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         # Instantiate data handler and loader to efficiently create batches
         data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", is_train = True)
-        batch_size = 16
         num_workers = 1
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
         # Store the loss history
         batch_loss_histroy = []
         total_loss = 0
+        best_dev_loss = 0
         best_loss = sys.maxsize
         for epoch in range(epochs):
             print("Epoch is " + str(epoch))
             self.train()
-            total_loss = 0
+            batch_total_loss = 0
             for i, batch in enumerate(loader):
                 images = batch[0]
                 labels = batch[1]
@@ -93,20 +94,21 @@ class Module(nn.Module):
                 output.backward()
                 optimizer.step()
                 total_loss += output.item()
+                batch_total_loss +=output.item()
                 if i % 50 == 0:
                     batch_loss_histroy.append(output.item())
                     print("Loss: for batch " + str(i) + " is " + str(total_loss))
-                    total_loss = 0
+                    batch_total_loss = 0
                 del output
             # Store the model corresponding to the least loss
             if total_loss < best_loss:
                 best_loss = total_loss
-                torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+".pt"))
+                torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+"_"+str(batch)+".pt"))
 
             # Check the loss on the validation set, set to eval mode to ensure Dropout behaves correctly
             self.eval()
             # Create data handler and data loader for validation set.
-            dev_data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", is_train=False)
+            dev_data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", is_train=False)
             dev_loader = DataLoader(dev_data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
             total_dev_loss = 0
             # Ensure that gradients aren't computed
@@ -121,9 +123,9 @@ class Module(nn.Module):
                     output = loss(score, labels)
                     total_dev_loss += output.item()
                     del output
-                    if i % 50 == 0:
-                        print("Validation Loss: for batch " + str(i) + "is " + str(total_dev_loss))
-                        total_dev_loss = 0
+            if total_dev_loss < best_dev_loss:
+                best_dev_loss = total_dev_loss
+                torch.save(self.state_dict(),os.path.join(self.save_dir, "dev_weights_epoch_" + str(epoch) + ".pt"))
 
     def inference(self):
         pass
@@ -131,6 +133,17 @@ class Module(nn.Module):
 
 
 if __name__ == "__main__":
-    obj = Module(save_dir='saved_weights')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--lr', action="store", default=0.000001, type=float,
+                        help='The learning rate of the network')
+    parser.add_argument('--batch_size', action='store', type=int, default=32,
+                        help="The learning rate of the last layer of the SRCNN")
+    parser.add_argument('--epochs', action='store', type=int, default=100)
+    parser.add_argument('--momentum', action='store', type=float, default=0.9)
+    parser.add_argument('--save_dir', action='store', type=str, default='saved_weights')
+    parser.add_argument('--train_dir', action='store', type=str,default="../train256")
+
+    args = parser.parse_args()
+    obj = Module(save_dir=args.save_dir)
     #print(summary(obj, (1, 256, 256)))
-    obj.train_model()
+    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
