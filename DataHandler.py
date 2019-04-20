@@ -30,7 +30,7 @@ class DataHandler(Dataset):
             self.transform = self.create_transformation()
 
         # creating a dev set with 20% of train data containing liver and no liver images
-        elif mode == 'dev':
+        elif mode == 'val':
             positive_files = os.listdir(self.positive_img_dir)
             negative_files = os.listdir(self.negative_img_dir)
             positive_files = [os.path.join(self.positive_img_dir, positive_files[i]) for i in
@@ -55,13 +55,13 @@ class DataHandler(Dataset):
 
     @staticmethod
     def create_transformation():
-        dataset_mean = [0.4884048, 0.4982816, 0.50658032]
-        dataset_std = [0.0909427 * 255, 0.0954222 * 255, 0.01157272 * 255]
+        dataset_mean = [0.0014861894323434117]
+        dataset_std = [0.0020256241244931863]
         transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             transforms.RandomRotation(360),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.0014861894323434117], std=[0.0020256241244931863])
+            transforms.Normalize(mean=dataset_mean, std=dataset_std)
         ])
         return transform
 
