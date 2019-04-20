@@ -96,7 +96,7 @@ class Module(nn.Module):
         # Store the loss history
         batch_loss_histroy = []
         total_loss = 0
-        best_dev_loss = 0
+        best_dev_loss = sys.maxsize
         best_loss = sys.maxsize
         for epoch in range(epochs):
             print("Epoch is " + str(epoch))
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
-    #obj.load_model("saved_weights/weights_epoch_6.pt")
-    #obj.predict()
+    obj.load_model("saved_weights/weights_epoch_13.pt")
+    obj.predict()
     #print(summary(obj, (1, 256, 256)))
-    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
