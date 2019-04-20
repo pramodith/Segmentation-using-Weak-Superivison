@@ -156,10 +156,9 @@ class Module(nn.Module):
                 best_dev_loss = total_dev_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir, "dev_weights_epoch_" + str(epoch) + ".pt"))
 
-    def predict(self,test_dir):
+    def predict(self,test_dir,batch_size):
         data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
                                    "masks_pngs")
-        batch_size = 8
         num_workers = 1
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
         self.cuda()
@@ -199,6 +198,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
     obj.load_model("saved_weights/weights_epoch_13.pt")
-    obj.predict(args.test_dir)
+    obj.predict(args.test_dir,args.batch_size)
     #print(summary(obj, (1, 256, 256)))
     #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
