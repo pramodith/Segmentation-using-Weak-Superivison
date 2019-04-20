@@ -5,13 +5,14 @@ from DataHandler import DataHandler
 from torch.utils.data.dataloader import DataLoader
 import sys
 import os
-from torchsummary import summary
+#from torchsummary import summary
 
 class Module(nn.Module):
 
     def __init__(self,hyp = 5,save_dir=None):
         super(Module, self).__init__()
 
+        # The hyperparmater that decides the smoothing factor
         self.hyp = hyp
         if save_dir:
             self.save_dir = save_dir
@@ -56,22 +57,27 @@ class Module(nn.Module):
 
     def forward(self, input):
         feature_map = self.overfeat(input)
+        # This is the score aggregation layer to get a final score for each class
         # summing across rows and columns
         exp_sum = torch.sum(torch.sum(torch.exp(self.hyp*feature_map), 1), 1)
         # aggregate score for each class
         score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
         return score
 
-    def train_model(self, mode=True, epochs=5, lr=0.00001, momentum=0.9, weight_decay=0.00005):
+    def train_model(self, epochs=5, lr=0.000001, momentum=0.9, weight_decay=0.00005):
+        if torch.cuda.is_available():
+            self.cuda()
         loss = nn.CrossEntropyLoss()
-        batch_loss_histroy = []
-        total_loss = 0
         optimizer = optim.RMSprop(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+        # Instantiate data handler and loader to efficiently create batches
         data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", is_train = True)
         batch_size = 16
         num_workers = 1
-        best_loss = sys.maxsize
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
+        # Store the loss history
+        batch_loss_histroy = []
+        total_loss = 0
+        best_loss = sys.maxsize
         for epoch in range(epochs):
             print("Epoch is " + str(epoch))
             self.train()
@@ -79,6 +85,9 @@ class Module(nn.Module):
             for i, batch in enumerate(loader):
                 images = batch[0]
                 labels = batch[1]
+                if torch.cuda.is_available():
+                    images = images.cuda()
+                    labels = labels.cuda()
                 score = self.forward(images)
                 output = loss(score, labels)
                 output.backward()
@@ -89,19 +98,25 @@ class Module(nn.Module):
                     print("Loss: for batch " + str(i) + " is " + str(total_loss))
                     total_loss = 0
                 del output
-
+            # Store the model corresponding to the least loss
             if total_loss < best_loss:
                 best_loss = total_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+".pt"))
 
+            # Check the loss on the validation set, set to eval mode to ensure Dropout behaves correctly
             self.eval()
+            # Create data handler and data loader for validation set.
             dev_data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", is_train=False)
             dev_loader = DataLoader(dev_data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
             total_dev_loss = 0
+            # Ensure that gradients aren't computed
             with torch.no_grad():
                 for i, batch in enumerate(dev_loader):
                     images = batch[0]
                     labels = batch[1]
+                    if torch.cuda.is_available():
+                        images = images.cuda()
+                        labels = labels.cuda()
                     score = self.forward(images)
                     output = loss(score, labels)
                     total_dev_loss += output.item()
@@ -110,10 +125,12 @@ class Module(nn.Module):
                         print("Validation Loss: for batch " + str(i) + "is " + str(total_dev_loss))
                         total_dev_loss = 0
 
+    def inference(self):
+        pass
+
+
 
 if __name__ == "__main__":
     obj = Module(save_dir='saved_weights')
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # PyTorch v0.4.0
-    obj = obj.to(device)
     #print(summary(obj, (1, 256, 256)))
     obj.train_model()
