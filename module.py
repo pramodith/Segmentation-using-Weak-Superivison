@@ -6,6 +6,10 @@ from torch.utils.data.dataloader import DataLoader
 import sys
 import os
 import argparse
+from torch.nn import functional as F
+import numpy as np
+from sklearn.metrics import f1_score,accuracy_score
+
 #from torchsummary import summary
 
 class Module(nn.Module):
@@ -43,21 +47,24 @@ class Module(nn.Module):
                                       self.conv_2,
                                       self.maxpool_2, nn.ReLU(),
                                       self.conv_3,nn.ReLU(),
-                                      nn.BatchNorm2d(512),
+                                      #nn.BatchNorm2d(512),
                                       self.conv_4,nn.ReLU(),
                                       self.conv_5,nn.ReLU(),
                                       self.conv_6,
                                       self.maxpool_3,nn.ReLU(),
-                                      nn.BatchNorm2d(1024),
+                                      #nn.BatchNorm2d(1024),
                                       self.seg_conv1,nn.ReLU(),
                                       nn.Dropout(),
                                       self.seg_conv2,nn.ReLU(),
                                       nn.Dropout(),
-                                      nn.BatchNorm2d(768),
+                                      #nn.BatchNorm2d(768),
                                       self.seg_conv3,nn.ReLU(),
                                       nn.Dropout(),
                                       self.seg_conv4)
         self.softmax = nn.Softmax()
+
+    def load_model(self,weights_path):
+        self.load_state_dict(torch.load(weights_path))
 
     def forward(self, input):
         feature_map = self.overfeat(input)
@@ -74,7 +81,7 @@ class Module(nn.Module):
         loss = nn.CrossEntropyLoss()
         optimizer = optim.SGD(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         # Instantiate data handler and loader to efficiently create batches
-        data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", is_train = True)
+        data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", mode = 'train')
         num_workers = 1
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
         # Store the loss history
@@ -113,7 +120,7 @@ class Module(nn.Module):
             # Check the loss on the validation set, set to eval mode to ensure Dropout behaves correctly
             self.eval()
             # Create data handler and data loader for validation set.
-            dev_data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", is_train=False)
+            dev_data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", mode='val')
             dev_loader = DataLoader(dev_data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
             total_dev_loss = 0
             # Ensure that gradients aren't computed
@@ -133,8 +140,29 @@ class Module(nn.Module):
                 best_dev_loss = total_dev_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir, "dev_weights_epoch_" + str(epoch) + ".pt"))
 
-    def inference(self):
-        pass
+    def predict(self):
+        data_handler = DataHandler("../test256", "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
+                                   "masks_pngs")
+        batch_size = 8
+        num_workers = 1
+        loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
+        self.cuda()
+        self.eval()
+        predicted_labels = []
+        ground_truth = []
+        with torch.no_grad():
+            for batch in loader:
+                images = batch[0]
+                labels = batch[1]
+                if torch.cuda.is_available():
+                    images = images.cuda()
+                probs = F.softmax(self.forward(images))
+                predicted_labels.extend(list(torch.argmax(probs,1).cpu().detach().numpy()))
+                ground_truth.extend(list(labels.detach().numpy()))
+
+        print("F1-score is "+ str(f1_score(ground_truth,predicted_labels)))
+        print("Accuracy is "+ str(accuracy_score(ground_truth,predicted_labels)))
+
 
 
 
@@ -151,5 +179,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
+    obj.load_model("saved_weights/weights_epoch_6.pt")
+    obj.predict()
     #print(summary(obj, (1, 256, 256)))
-    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
