@@ -71,7 +71,7 @@ class Module(nn.Module):
         loss = nn.CrossEntropyLoss()
         optimizer = optim.RMSprop(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         # Instantiate data handler and loader to efficiently create batches
-        data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", is_train = True)
+        data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", is_train = True)
         num_workers = 1
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
         # Store the loss history
