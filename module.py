@@ -82,6 +82,7 @@ class Module(nn.Module):
         for epoch in range(epochs):
             print("Epoch is " + str(epoch))
             self.train()
+            total_loss = 0
             batch_total_loss = 0
             for i, batch in enumerate(loader):
                 images = batch[0]
@@ -97,9 +98,10 @@ class Module(nn.Module):
                 batch_total_loss +=output.item()
                 if i % 50 == 0:
                     batch_loss_histroy.append(output.item())
-                    print("Loss: for batch " + str(i) + " is " + str(total_loss))
+                    print("Loss: for batch " + str(i) + " is " + str(batch_total_loss))
                     batch_total_loss = 0
                 del output
+            print("Training loss is " + str(total_loss))
             # Store the model corresponding to the least loss
             if total_loss < best_loss:
                 best_loss = total_loss
@@ -123,6 +125,7 @@ class Module(nn.Module):
                     output = loss(score, labels)
                     total_dev_loss += output.item()
                     del output
+            print("Validation loss is " +str(total_dev_loss))
             if total_dev_loss < best_dev_loss:
                 best_dev_loss = total_dev_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir, "dev_weights_epoch_" + str(epoch) + ".pt"))
