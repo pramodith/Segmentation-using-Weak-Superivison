@@ -54,9 +54,10 @@ class DataHandler(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver",False)
-    batch_size = 8
-    num_workers = 1
-    loader = DataLoader(data_handler,batch_size,True,num_workers=num_workers,pin_memory=True)
-    for img,label in loader:
-        print('Hi')
+    pass
+    #data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver",False)
+    #batch_size = 8
+    #num_workers = 1
+    #loader = DataLoader(data_handler,batch_size,True,num_workers=num_workers,pin_memory=True)
+    #for img,label in loader:
+    #    print('Hi')
