@@ -9,8 +9,9 @@ import argparse
 from torch.nn import functional as F
 import numpy as np
 from sklearn.metrics import f1_score,accuracy_score
-
-#from torchsummary import summary
+from torchvision.transforms.functional import affine
+from torchvision.models import resnet50
+from torchsummary import summary
 
 class Module(nn.Module):
 
@@ -22,47 +23,9 @@ class Module(nn.Module):
         if save_dir:
             self.save_dir = save_dir
 
-        # First 6 layers of Overfeat arch. #https://arxiv.org/abs/1312.6229
-        self.conv_1 = nn.Conv2d(in_channels=1, out_channels=96, kernel_size=5, stride=2)
-        self.maxpool_1 = nn.MaxPool2d(kernel_size=3, stride=3)
-        self.conv_2 = nn.Conv2d(in_channels=96, out_channels=256,kernel_size=3, stride=1)
-        self.maxpool_2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv_3 = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1)
-        self.conv_4 = nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1)
-        self.conv_5 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=1)
-        self.conv_6 = nn.Conv2d(in_channels=1024,out_channels=1024, kernel_size=3, stride=1, padding=1)
-        self.maxpool_3 = nn.MaxPool2d(kernel_size=3, stride=3)
 
-        #Segmentation layer of https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Pinheiro_
-        # From_Image-Level_to_2015_CVPR_paper.pdf
-        self.seg_conv1 = nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1)
-        self.seg_conv2 = nn.Conv2d(in_channels=1024, out_channels=768, kernel_size=3, stride=1)
-        self.seg_conv3 = nn.Conv2d(in_channels=768, out_channels=512, kernel_size=1, stride=1)
-        self.seg_conv4 = nn.Conv2d(in_channels=512, out_channels=2, kernel_size=1, stride=1)
-
-        #TODO: Add batch norm layers to check if they improve accuracy
-        # Storing all the layers in a Sequential so the output of the previous layer is the input to the next layer
-        self.overfeat = nn.Sequential(self.conv_1,
-                                      self.maxpool_1, nn.ReLU(),
-                                      self.conv_2,
-                                      self.maxpool_2, nn.ReLU(),
-                                      self.conv_3,nn.ReLU(),
-                                      nn.BatchNorm2d(512),
-                                      self.conv_4,nn.ReLU(),
-                                      self.conv_5,nn.ReLU(),
-                                      self.conv_6,
-                                      self.maxpool_3,nn.ReLU(),
-                                      nn.BatchNorm2d(1024),
-                                      self.seg_conv1,nn.ReLU(),
-                                      nn.Dropout(),
-                                      self.seg_conv2,nn.ReLU(),
-                                      nn.Dropout(),
-                                      nn.BatchNorm2d(768),
-                                      self.seg_conv3,nn.ReLU(),
-                                      nn.Dropout(),
-                                      self.seg_conv4)
-        self.softmax = nn.Softmax()
-
+        self.model = resnet50(pretrained=True)
+        self.model.fc = nn.Linear(2048,2)
         #initialize convolutional layers with Xavier initialization
         self.init_weights()
 
@@ -76,7 +39,7 @@ class Module(nn.Module):
         self.load_state_dict(torch.load(weights_path))
 
     def forward(self, input):
-        feature_map = self.overfeat(input)
+        feature_map = self.model(input)
         # This is the score aggregation layer to get a final score for each class
         # summing across rows and columns
         exp_sum = torch.sum(torch.sum(torch.exp(self.hyp*feature_map), 1), 1)
@@ -103,7 +66,7 @@ class Module(nn.Module):
             self.train()
             total_loss = 0
             batch_total_loss = 0
-            '''
+
             for i, batch in enumerate(loader):
                 images = batch[0]
                 labels = batch[1]
@@ -127,7 +90,7 @@ class Module(nn.Module):
             if total_loss < best_loss:
                 best_loss = total_loss
                 torch.save(self.state_dict(),os.path.join(self.save_dir,"weights_epoch_"+str(epoch)+".pt"))
-            '''
+
             # Check the loss on the validation set, set to eval mode to ensure Dropout behaves correctly
             self.eval()
             # Create data handler and data loader for validation set.
@@ -180,8 +143,26 @@ class Module(nn.Module):
         print("F1-score is "+ str(f1_score(ground_truth, predicted_labels)))
         print("Accuracy is "+ str(accuracy_score(ground_truth, predicted_labels)))
 
-    def post_processing(self):
-        pass
+
+    def generate_test_image(self,test_dir,num_conv_layers):
+        data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
+                                   "masks_pngs")
+        num_workers = 1
+        batch_size = 1
+        loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
+
+        for image, labels, img_id in ():
+            # create several shifted copies of the input
+            shifted_images = []
+            shifted_labels = []
+            stride = 2 ** num_conv_layers
+            for dy in range(stride):
+                for dx in range(stride):
+                    shifted_images.append(affine(image,angle=0,translate=(dx,dy),scale=1,shear=0))
+                    shifted_labels.append(labels[dy:, dx:])
+
+            # get model output for each shifted image/label pair
+            op_results = [F.softmax(self.model(image)) for image in shifted_images]
 
 
 
@@ -199,7 +180,6 @@ if __name__ == "__main__":
     parser.add_argument('--test_dir', action='store', type=str, default="../train256")
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
-    obj.load_model("saved_weights/weights_epoch_13.pt")
-    obj.predict(args.test_dir,args.batch_size)
-    #print(summary(obj, (1, 256, 256)))
-    #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    #obj.load_model("saved_weights/weights_epoch_13.pt")
+    #obj.predict(args.test_dir,args.batch_size)
+    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)

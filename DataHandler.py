@@ -58,7 +58,6 @@ class DataHandler(Dataset):
         dataset_mean = [0.0014861894323434117]
         dataset_std = [0.0020256241244931863]
         transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=1),
             transforms.RandomRotation(360),
             transforms.ToTensor(),
             transforms.Normalize(mean=dataset_mean, std=dataset_std)
@@ -74,7 +73,7 @@ class DataHandler(Dataset):
     def __getitem__(self, ind):
         # Open the image corresponding to the index
         if self.mode!='test':
-            img = Image.open(self.file_names[ind])
+            img = Image.open(self.file_names[ind]).convert('RGB')
             # Apply transformation to image
             if self.transform is not None:
                 img = self.transform(img)
@@ -83,7 +82,7 @@ class DataHandler(Dataset):
 
         else:
             # Open both the test images and the masks
-            img = Image.open(self.test_file_names[ind])
+            img = Image.open(self.test_file_names[ind]).convert('RGB')
             mask = Image.open(self.test_mask_file_names[ind])
             # If all pixels are white in the mask the image does not have any liver cells
             if np.mean(mask)==255:
