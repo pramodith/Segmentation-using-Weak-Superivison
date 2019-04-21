@@ -39,12 +39,13 @@ class Module(nn.Module):
         self.load_state_dict(torch.load(weights_path))
 
     def forward(self, input):
-        feature_map = self.model(input)
+        #feature_map = self.model(input)
         # This is the score aggregation layer to get a final score for each class
         # summing across rows and columns
-        exp_sum = torch.sum(torch.sum(torch.exp(self.hyp*feature_map), 1), 1)
+        #exp_sum = torch.sum(torch.sum(torch.exp(self.hyp*feature_map), 1), 1)
         # aggregate score for each class
-        score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
+        #score = 1/self.hyp*torch.log(1/(feature_map.shape[-1]*feature_map.shape[-2])*exp_sum)
+        score = self.model(input)
         return score
 
     def train_model(self, train_dir, batch_size=16, epochs=5, lr=0.0001, momentum=0.9, weight_decay=0.00005):
