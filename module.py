@@ -14,6 +14,7 @@ from sklearn.metrics import f1_score,accuracy_score
 from torchvision.transforms.functional import affine
 from torchvision.models import resnet50
 from torchsummary import summary
+from torch.utils.data.sampler import WeightedRandomSampler
 
 interm_out = []
 avg_pool_out = []
@@ -60,6 +61,23 @@ class Module(nn.Module):
         score = self.model(input)
         return score
 
+    def create_weighted_sampler(self):
+        data_handler = DataHandler("/content/train256", "images_pngs_liver", "images_pngs_noliver", 'train',
+                                   "images_pngs",
+                                   "masks_pngs")
+        batch_size = 128
+        num_workers = 1
+        all_labels = []
+        loader = DataLoader(data_handler, batch_size, num_workers=num_workers, pin_memory=True)
+        for i, batch in enumerate(loader):
+            all_labels.extend(batch[1])
+        weights = [len(all_labels) - sum(all_labels), sum(all_labels)]
+        weights = 1 / torch.Tensor(weights)
+        samples_weight = np.asarray([weights[label] for label in all_labels])
+        samples_weight = torch.from_numpy(samples_weight)
+        weighted_sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+        return weighted_sampler
+
     def train_model(self, train_dir, batch_size=16, epochs=5, lr=0.0001, momentum=0.9, weight_decay=0.00005):
         if torch.cuda.is_available():
             self.cuda()
@@ -68,7 +86,8 @@ class Module(nn.Module):
         # Instantiate data handler and loader to efficiently create batches
         data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", mode = 'train')
         num_workers = 1
-        loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
+        weighted_sampler = self.create_weighted_sampler()
+        loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True, sampler=weighted_sampler)
         # Store the loss history
         batch_loss_histroy = []
         total_loss = 0
