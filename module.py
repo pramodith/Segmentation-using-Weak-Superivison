@@ -240,7 +240,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_dir', action='store', type=str, default="../test256")
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
-    #obj.load_model("saved_weights/weights_epoch_RESNET_PRE4.pt")
+    obj.load_model("saved_weights/dev_weights_epoch_26.pt")
     #obj.predict(args.test_dir,args.batch_size)
     #obj.attention(args.test_dir)
     obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
