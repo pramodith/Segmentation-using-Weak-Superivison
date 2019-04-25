@@ -106,3 +106,5 @@ if __name__ == "__main__":
     weights = 1/torch.Tensor(weights)
     samples_weight = np.asarray([weights[label] for label in all_labels])
     sampler = sampler.WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'),len(weights))
+    for i, batch in enumerate(loader):
+        print(sum(batch[0]))
