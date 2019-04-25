@@ -5,6 +5,7 @@ from PIL import Image
 from torchvision import transforms
 import numpy as np
 import torch
+import torch.utils.data.sampler as sampler
 
 class DataHandler(Dataset):
 
@@ -97,13 +98,11 @@ if __name__ == "__main__":
     data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver",'train',"images_pngs","masks_pngs")
     batch_size = 128
     num_workers = 1
-    loader = DataLoader(data_handler,batch_size,True,num_workers=num_workers,pin_memory=True)
-    sum = []
-    std = []
-    for i,batch in enumerate(loader):
-        print(i)
-        sum.append(torch.mean(batch[0]).item())
-        std.append(torch.std(batch[0]).item())
-    mean = np.mean(sum)/128
-    std = np.mean(std)/128
-    print(mean)
+    all_labels = []
+    loader = DataLoader(data_handler, batch_size, num_workers=num_workers, pin_memory=True)
+    for i, batch in enumerate(loader):
+        all_labels.extend(batch[0])
+    weights = [len(all_labels==0),len(all_labels==1)]
+    weights = 1/torch.Tensor(weights)
+    samples_weight = np.asarray([weights[label] for label in all_labels])
+    sampler = sampler.WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'),len(weights))
