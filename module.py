@@ -87,7 +87,7 @@ class Module(nn.Module):
         data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", mode = 'train')
         num_workers = 1
         weighted_sampler = self.create_weighted_sampler()
-        loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True, sampler=weighted_sampler)
+        loader = DataLoader(data_handler, batch_size,False, num_workers=num_workers, pin_memory=True, sampler=weighted_sampler)
         # Store the loss history
         batch_loss_histroy = []
         total_loss = 0
