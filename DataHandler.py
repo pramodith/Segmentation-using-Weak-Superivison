@@ -5,7 +5,7 @@ from PIL import Image
 from torchvision import transforms
 import numpy as np
 import torch
-import torch.utils.data.sampler as sampler
+from torch.utils.data.sampler import WeightedRandomSampler
 
 class DataHandler(Dataset):
 
@@ -95,16 +95,20 @@ class DataHandler(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    data_handler = DataHandler("/content/train256","images_pngs_liver","images_pngs_noliver",'train',"images_pngs","masks_pngs")
+    data_handler = DataHandler("/content/train256", "images_pngs_liver", "images_pngs_noliver", 'train', "images_pngs",
+                               "masks_pngs")
     batch_size = 128
     num_workers = 1
     all_labels = []
     loader = DataLoader(data_handler, batch_size, num_workers=num_workers, pin_memory=True)
     for i, batch in enumerate(loader):
-        all_labels.extend(batch[0])
-    weights = [len(all_labels==0),len(all_labels==1)]
-    weights = 1/torch.Tensor(weights)
+        all_labels.extend(batch[1])
+    weights = [len(all_labels) - sum(all_labels), sum(all_labels)]
+    weights = 1 / torch.Tensor(weights)
     samples_weight = np.asarray([weights[label] for label in all_labels])
-    sampler = sampler.WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'),len(weights))
+    samples_weight = torch.from_numpy(samples_weight)
+    print(len(samples_weight))
+    weighted_sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+    loader = DataLoader(data_handler, batch_size, num_workers=num_workers, pin_memory=True, sampler=weighted_sampler)
     for i, batch in enumerate(loader):
-        print(sum(batch[0]))
+        print(batch[1])
