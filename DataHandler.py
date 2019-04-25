@@ -95,7 +95,7 @@ class DataHandler(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    data_handler = DataHandler("../train256","images_pngs_liver","images_pngs_noliver",'train',"images_pngs","masks_pngs")
+    data_handler = DataHandler("/content/train256","images_pngs_liver","images_pngs_noliver",'train',"images_pngs","masks_pngs")
     batch_size = 128
     num_workers = 1
     all_labels = []
