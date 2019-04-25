@@ -106,7 +106,7 @@ class Module(nn.Module):
                     images = images.cuda()
                     labels = labels.cuda()
                 score = self.forward(images)
-                optim.zero_grad()
+                optimizer.zero_grad()
                 output = loss(score, labels)
                 output.backward()
                 optimizer.step()
