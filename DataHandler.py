@@ -83,6 +83,7 @@ class DataHandler(Dataset):
         # Open the image corresponding to the index
         if self.mode!='test':
             img = Image.open(self.file_names[ind]).convert('RGB')
+            name = self.test_file_names[ind]
             # Apply transformation to image
             if self.transform is not None:
                 img = self.transform(img)
@@ -92,8 +93,9 @@ class DataHandler(Dataset):
         else:
             # Open both the test images and the masks
             img = Image.open(self.test_file_names[ind]).convert('RGB')
+            name = self.test_file_names[ind]
             mask = Image.open(self.test_mask_file_names[ind])
-            #print(self.test_mask_file_names[ind])
+            print(self.test_mask_file_names[ind])
             # If all pixels are white in the mask the image does not have any liver cells
             if np.mean(mask)==255:
                 label = 0
@@ -101,7 +103,7 @@ class DataHandler(Dataset):
                 label = 1
             if self.transform is not None:
                 img = self.transform(img)
-        return img, label
+        return img, label, name
 
 if __name__ == "__main__":
     data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", 'train', "images_pngs",
