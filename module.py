@@ -38,7 +38,7 @@ class Module(nn.Module):
 
         self.model = resnet50(pretrained=False)
         self.model.fc = nn.Linear(2048,2)
-        #self.model.layer4[0].conv3.register_forward_hook(hook)
+        self.model.layer4[0].conv3.register_forward_hook(hook)
         #self.model.avgpool.register_forward_hook(hook_gap)
         #initialize convolutional layers with Xavier initialization
         self.init_weights()
@@ -177,7 +177,7 @@ class Module(nn.Module):
         print("F1-score is "+ str(f1_score(ground_truth, predicted_labels)))
         print("Accuracy is "+ str(accuracy_score(ground_truth, predicted_labels)))
 
-    def attention(self,test_dir):
+    def attention(self,test_dir,output_dir):
         data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
                                    "masks_pngs")
         num_workers = 1
@@ -189,25 +189,33 @@ class Module(nn.Module):
             for batch in loader:
                 images = batch[0]
                 labels = batch[1]
+                name = batch[2]
                 if torch.cuda.is_available():
                     images = images.cuda()
                 pred = torch.argmax(F.softmax(self.forward(images)),1)
                 print(pred)
                 print(labels)
-                if pred[0].item()==0:
+                activation_map = np.zeros((256,256))
+                if pred[0].item()==1:
                     weights = self.model.fc.weight[pred].cpu().detach().numpy().squeeze(0)
                     intermed_layer = interm_out[-1].cpu().detach().numpy()
                     intermed_layer = intermed_layer.transpose([0, 2, 3, 1]).squeeze(0)
                     mat_for_mul = zoom(intermed_layer, (32, 32, 1), order=1)
                     activation_map = np.dot(mat_for_mul.reshape((256 * 256, 2048)), weights).reshape(256,256)  # dim: 224 x 224
-                    f,ax = plt.subplots()
-                    ax.imshow(images.cpu().detach().numpy().squeeze(0).transpose([1,2,0]),alpha=0.5)
-                    ax.imshow(activation_map, cmap='jet',alpha=0.5)
+                    activation_map[activation_map < 0.5] = 0
+                    activation_map[activation_map >= 0.5] = 255
+                    cv2.imwrite(os.path.join(output_dir,name[0].split("\\")[-1]),activation_map)
+                    #f,ax = plt.subplots()
+                    #plt.imshow(images.cpu().detach().numpy().squeeze(0).transpose([1,2,0]),alpha=0.5)
+                    #plt.imshow(activation_map, cmap='jet',alpha=0.5)
+                    #plt.colorbar(cmap='jet')
+                    #plt.show()
+                cv2.imwrite(os.path.join(output_dir, name[0].split("\\")[-1]), activation_map)
 
     def generate_test_image(self,test_dir,num_conv_layers):
         data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
                                    "masks_pngs")
-        num_workers = 1
+        num_workers = 0
         batch_size = 1
         loader = DataLoader(data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
 
@@ -236,9 +244,10 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir', action='store', type=str, default='saved_weights')
     parser.add_argument('--train_dir', action='store', type=str,default="../train256")
     parser.add_argument('--test_dir', action='store', type=str, default="../test256")
+    parser.add_argument('--output_dir', action='store', type=str, default="../results")
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
     obj.load_model("saved_weights/dev_weights_epoch_22.pt")
-    obj.predict(args.test_dir,args.batch_size)
-    #obj.attention(args.test_dir)
+    #obj.predict(args.test_dir,args.batch_size)
+    obj.attention(args.test_dir, args.output_dir)
     #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
