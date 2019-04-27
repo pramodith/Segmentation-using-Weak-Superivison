@@ -38,7 +38,7 @@ class Module(nn.Module):
 
         self.model = resnet50(pretrained=False)
         self.model.fc = nn.Linear(2048,2)
-        self.model.layer4[0].conv3.register_forward_hook(hook)
+        #self.model.layer4[0].conv3.register_forward_hook(hook)
         #self.model.avgpool.register_forward_hook(hook_gap)
         #initialize convolutional layers with Xavier initialization
         self.init_weights()
