@@ -15,6 +15,7 @@ from torchvision.transforms.functional import affine
 from torchvision.models import resnet50
 from torchsummary import summary
 from torch.utils.data.sampler import WeightedRandomSampler
+from matplotlib import pyplot as plt
 
 interm_out = []
 avg_pool_out = []
@@ -37,7 +38,7 @@ class Module(nn.Module):
 
         self.model = resnet50(pretrained=False)
         self.model.fc = nn.Linear(2048,2)
-        #self.model.layer4[0].conv3.register_forward_hook(hook)
+        self.model.layer4[0].conv3.register_forward_hook(hook)
         #self.model.avgpool.register_forward_hook(hook_gap)
         #initialize convolutional layers with Xavier initialization
         self.init_weights()
@@ -172,7 +173,8 @@ class Module(nn.Module):
                 probs = F.softmax(self.forward(images))
                 predicted_labels.extend(list(torch.argmax(probs,1).cpu().detach().numpy()))
                 ground_truth.extend(list(labels.detach().numpy()))
-
+        ground_truth = [1-x for x in ground_truth]
+        predicted_labels = [1-x for x in predicted_labels]
         print("F1-score is "+ str(f1_score(ground_truth, predicted_labels)))
         print("Accuracy is "+ str(accuracy_score(ground_truth, predicted_labels)))
 
@@ -191,17 +193,17 @@ class Module(nn.Module):
                 if torch.cuda.is_available():
                     images = images.cuda()
                 pred = torch.argmax(F.softmax(self.forward(images)),1)
-
-                weights = self.model.fc.weight[pred:].cpu().detach().numpy().squeeze(0)
-                intermed_layer = interm_out[-1].cpu().detach().numpy()
-                intermed_layer = intermed_layer.transpose([0, 2, 3, 1]).squeeze(0)
-                mat_for_mul = zoom(intermed_layer, (32, 32, 1), order=1)
-                activation_map = np.dot(mat_for_mul.reshape((256*256, 2048)), weights).reshape(256,256) # dim: 224 x 224
                 print(pred)
                 print(labels)
-                if pred[0]==0:
-                    cv2.imshow("aasa",activation_map)
-                    cv2.waitKey(0)
+                if pred[0].item()==0:
+                    weights = self.model.fc.weight[pred].cpu().detach().numpy().squeeze(0)
+                    intermed_layer = interm_out[-1].cpu().detach().numpy()
+                    intermed_layer = intermed_layer.transpose([0, 2, 3, 1]).squeeze(0)
+                    mat_for_mul = zoom(intermed_layer, (32, 32, 1), order=1)
+                    activation_map = np.dot(mat_for_mul.reshape((256 * 256, 2048)), weights).reshape(256,256)  # dim: 224 x 224
+                    f,ax = plt.subplots(1,2)
+                    ax[0,0].imshow(images.cpu().detach().numpy().squeeze(0))
+                    ax[0,1].imshow(activation_map)
 
 
     def generate_test_image(self,test_dir,num_conv_layers):
@@ -223,8 +225,6 @@ class Module(nn.Module):
 
             # get model output for each shifted image/label pair
             op_results = [F.softmax(self.model(image)) for image in shifted_images]
-
-
 
 
 if __name__ == "__main__":
