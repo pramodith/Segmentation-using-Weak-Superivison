@@ -5,6 +5,7 @@ from PIL import Image
 from torchvision import transforms
 import numpy as np
 import torch
+import cv2
 from torch.utils.data.sampler import WeightedRandomSampler
 
 class DataHandler(Dataset):
@@ -25,7 +26,7 @@ class DataHandler(Dataset):
             positive_files = [os.path.join(self.positive_img_dir,positive_files[i]) for i in range(len(positive_files)*4//5)]
             negative_files = [os.path.join(self.negative_img_dir,negative_files[i]) for i in range(len(negative_files)*4//5)]
             # Assign label 0 to negative images and label 1 to positive images
-            self.labels = [0 for _ in range(len(positive_files))] + ([1 for _ in range(len(negative_files))])
+            self.labels = [1 for _ in range(len(positive_files))] + ([0 for _ in range(len(negative_files))])
             self.file_names = positive_files + negative_files
             # The type of image transformations that we will try
             self.transform = self.create_transformation()
@@ -39,7 +40,7 @@ class DataHandler(Dataset):
             negative_files = [os.path.join(self.negative_img_dir, negative_files[i]) for i in
                               range(len(negative_files) * 4 // 5, len(negative_files))]
             # Assign label 0 to negative images and label 1 to positive images
-            self.labels = [0 for _ in range(len(positive_files))] + ([1 for _ in range(len(negative_files))])
+            self.labels = [1 for _ in range(len(positive_files))] + ([0 for _ in range(len(negative_files))])
             self.file_names = positive_files + negative_files
 
         # test set
@@ -54,16 +55,23 @@ class DataHandler(Dataset):
         # The type of image transformations that we will try
         self.transform = self.create_transformation()
 
-    @staticmethod
-    def create_transformation():
+
+    def create_transformation(self):
         dataset_mean = [0.0014861894323434117]
         dataset_std = [0.0020256241244931863]
-        transform = transforms.Compose([
-            transforms.RandomRotation(360),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=dataset_mean, std=dataset_std)
-        ])
+        if self.mode!="test":
+            transform = transforms.Compose([
+                transforms.RandomRotation(360),
+                transforms.ToTensor()
+                #transforms.Normalize(mean=dataset_mean, std=dataset_std)
+            ])
+        else:
+            transform = transforms.Compose([
+                transforms.ToTensor(),
+                #transforms.Normalize(mean=dataset_mean, std=dataset_std)
+            ])
         return transform
+
 
     def __len__(self):
         if self.mode!='test':
@@ -75,6 +83,7 @@ class DataHandler(Dataset):
         # Open the image corresponding to the index
         if self.mode!='test':
             img = Image.open(self.file_names[ind]).convert('RGB')
+            print(self.file_names[ind])
             # Apply transformation to image
             if self.transform is not None:
                 img = self.transform(img)
@@ -85,6 +94,7 @@ class DataHandler(Dataset):
             # Open both the test images and the masks
             img = Image.open(self.test_file_names[ind]).convert('RGB')
             mask = Image.open(self.test_mask_file_names[ind])
+            print(self.test_mask_file_names[ind])
             # If all pixels are white in the mask the image does not have any liver cells
             if np.mean(mask)==255:
                 label = 1
@@ -95,7 +105,7 @@ class DataHandler(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    data_handler = DataHandler("/content/train256", "images_pngs_liver", "images_pngs_noliver", 'train', "images_pngs",
+    data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", 'train', "images_pngs",
                                "masks_pngs")
     batch_size = 128
     num_workers = 1
