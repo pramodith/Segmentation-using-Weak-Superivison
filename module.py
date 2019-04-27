@@ -200,9 +200,9 @@ class Module(nn.Module):
                     intermed_layer = intermed_layer.transpose([0, 2, 3, 1]).squeeze(0)
                     mat_for_mul = zoom(intermed_layer, (32, 32, 1), order=1)
                     activation_map = np.dot(mat_for_mul.reshape((256 * 256, 2048)), weights).reshape(256,256)  # dim: 224 x 224
-                    f,ax = plt.subplots(1,2)
-                    ax[0].imshow(images.cpu().detach().numpy().squeeze(0).transpose([1,2,0]))
-                    ax[1].imshow(activation_map)
+                    f,ax = plt.subplots()
+                    ax.imshow(images.cpu().detach().numpy().squeeze(0).transpose([1,2,0]),alpha=0.5)
+                    ax.imshow(activation_map, cmap='jet',alpha=0.5)
 
     def generate_test_image(self,test_dir,num_conv_layers):
         data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_dir', action='store', type=str, default="../test256")
     args = parser.parse_args()
     obj = Module(save_dir=args.save_dir)
-    #obj.load_model("saved_weights/dev_weights_epoch_26.pt")
-    #obj.predict(args.test_dir,args.batch_size)
+    obj.load_model("saved_weights/dev_weights_epoch_26.pt")
+    obj.predict(args.test_dir,args.batch_size)
     #obj.attention(args.test_dir)
-    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    #obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
