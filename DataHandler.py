@@ -95,7 +95,7 @@ class DataHandler(Dataset):
             img = Image.open(self.test_file_names[ind]).convert('RGB')
             name = self.test_file_names[ind]
             mask = Image.open(self.test_mask_file_names[ind])
-            print(self.test_mask_file_names[ind])
+            #print(self.test_mask_file_names[ind])
             # If all pixels are white in the mask the image does not have any liver cells
             if np.mean(mask)==255:
                 label = 0
