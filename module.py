@@ -186,15 +186,16 @@ class Module(nn.Module):
         self.cuda()
         self.eval()
         with torch.no_grad():
-            for batch in loader:
+            for ind,batch in enumerate(loader):
                 images = batch[0]
                 labels = batch[1]
                 name = batch[2]
+                print("Image : " + str(ind))
                 if torch.cuda.is_available():
                     images = images.cuda()
                 pred = torch.argmax(F.softmax(self.forward(images)),1)
-                print(pred)
-                print(labels)
+                #print(pred)
+                #print(labels)
                 activation_map = np.zeros((256,256))
                 if pred[0].item()==1:
                     weights = self.model.fc.weight[pred].cpu().detach().numpy().squeeze(0)
