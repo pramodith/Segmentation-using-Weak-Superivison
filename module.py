@@ -212,6 +212,7 @@ class Module(nn.Module):
                     #plt.colorbar(cmap='jet')
                     #plt.show()
                 cv2.imwrite(os.path.join(output_dir, name[0].split("\\")[-1]), activation_map)
+                print(os.path.join(output_dir, name[0].split("\\")[-1]))
 
     def generate_test_image(self,test_dir,num_conv_layers):
         data_handler = DataHandler(test_dir, "images_pngs_liver", "images_pngs_noliver", 'test', "images_pngs",
