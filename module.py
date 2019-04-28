@@ -205,12 +205,13 @@ class Module(nn.Module):
                     activation_map = np.dot(mat_for_mul.reshape((256 * 256, 2048)), weights).reshape(256,256)  # dim: 224 x 224
                     activation_map[activation_map < 0.5] = 0
                     activation_map[activation_map >= 0.5] = 255
-                    cv2.imwrite(os.path.join(output_dir,name[0].split("\\")[-1]),activation_map)
+                    #cv2.imwrite(os.path.join(output_dir,name[0].split("\\")[-1]),activation_map)
                     #f,ax = plt.subplots()
                     #plt.imshow(images.cpu().detach().numpy().squeeze(0).transpose([1,2,0]),alpha=0.5)
                     #plt.imshow(activation_map, cmap='jet',alpha=0.5)
                     #plt.colorbar(cmap='jet')
                     #plt.show()
+                print("Saving :" + str(os.path.join(output_dir, name[0].split("/")[-1])))
                 cv2.imwrite(os.path.join(output_dir, name[0].split("/")[-1]), activation_map)
 
     def generate_test_image(self,test_dir,num_conv_layers):
