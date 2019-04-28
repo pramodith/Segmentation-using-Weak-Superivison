@@ -8,9 +8,54 @@ import torch
 import cv2
 from torch.utils.data.sampler import WeightedRandomSampler
 
-class DataHandler(Dataset):
+class TestDataHandler(Dataset):
 
-    def __init__(self, root_dir, positive_img_dir, neg_img_dir, mode='train', test_images_dir=None, test_mask_images_dir=None):
+    def __init__(self, root_dir, test_images_dir=None, test_mask_images_dir=None):
+        # Root directory that contains the dataset
+        self.root_dir = root_dir
+        self.dataset_mean = [0.0014861894323434117]
+        self.dataset_std = [0.0020256241244931863]
+        # test set
+        test_images_path = os.path.join(self.root_dir,test_images_dir)
+        test_mask_images_path = os.path.join(self.root_dir,test_mask_images_dir)
+        file_names = sorted(os.listdir(test_images_path))
+        mask_names = sorted(os.listdir(test_mask_images_path))
+        self.test_file_names = [os.path.join(test_images_path,name) for name in file_names]
+        self.test_mask_file_names = [os.path.join(test_mask_images_path,name) for name in mask_names]
+        self.transform = self.create_transformation()
+
+    @staticmethod
+    def create_transformation():
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        return transform
+
+    def __len__(self):
+        return len(self.test_file_names)
+
+    def __getitem__(self, ind):
+        # Open both the test images and the masks
+        img = Image.open(self.test_file_names[ind]).convert('RGB')
+        name = self.test_file_names[ind]
+        mask = Image.open(self.test_mask_file_names[ind])
+        # print(self.test_mask_file_names[ind])
+        # If all pixels are white in the mask the image does not have any liver cells
+        if np.mean(mask) == 255:
+            label = 0
+        else:
+            label = 1
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img,label,name
+
+
+class DataHandler(Dataset):
+    '''
+    This is the data handler for the train and validation test set.
+    '''
+    def __init__(self, root_dir, positive_img_dir, neg_img_dir, mode='train'):
         # Root directory that contains the dataset
         self.root_dir = root_dir
 
@@ -18,6 +63,9 @@ class DataHandler(Dataset):
         self.positive_img_dir = os.path.join(self.root_dir,positive_img_dir)
         self.negative_img_dir = os.path.join(self.root_dir,neg_img_dir)
         self.mode = mode
+        # Train set mean and standard deviation caluculated before hand.
+        self.dataset_mean = [0.0014861894323434117]
+        self.dataset_std = [0.0020256241244931863]
 
         # Get the complete paths of all files in the dataset
         if mode == "train":
@@ -43,71 +91,35 @@ class DataHandler(Dataset):
             self.labels = [1 for _ in range(len(positive_files))] + ([0 for _ in range(len(negative_files))])
             self.file_names = positive_files + negative_files
 
-        # test set
-        elif mode == 'test':
-            test_images_path = os.path.join(self.root_dir,test_images_dir)
-            test_mask_images_path = os.path.join(self.root_dir,test_mask_images_dir)
-            file_names = sorted(os.listdir(test_images_path))
-            mask_names = sorted(os.listdir(test_mask_images_path))
-            self.test_file_names = [os.path.join(test_images_path,name) for name in file_names]
-            self.test_mask_file_names = [os.path.join(test_mask_images_path,name) for name in mask_names]
-
         # The type of image transformations that we will try
         self.transform = self.create_transformation()
 
-
-    def create_transformation(self):
-        dataset_mean = [0.0014861894323434117]
-        dataset_std = [0.0020256241244931863]
-        if self.mode!="test":
-            transform = transforms.Compose([
-                transforms.RandomRotation(360),
-                transforms.ToTensor()
-                #transforms.Normalize(mean=dataset_mean, std=dataset_std)
-            ])
-        else:
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                #transforms.Normalize(mean=dataset_mean, std=dataset_std)
+    # Use transformations for image augmentation.
+    @staticmethod
+    def create_transformation():
+        transform = transforms.Compose([
+            transforms.RandomRotation(360),
+            transforms.ToTensor()
             ])
         return transform
 
-
     def __len__(self):
-        if self.mode!='test':
-            return len(self.file_names)
-        else:
-            return len(self.test_file_names)
+        return len(self.file_names)
 
     def __getitem__(self, ind):
         # Open the image corresponding to the index
-        if self.mode!='test':
-            img = Image.open(self.file_names[ind]).convert('RGB')
-            name = self.test_file_names[ind]
-            # Apply transformation to image
-            if self.transform is not None:
-                img = self.transform(img)
-            # Label of image
-            label = self.labels[ind]
+        img = Image.open(self.file_names[ind]).convert('RGB')
+        name = self.file_names[ind]
+        # Apply transformation to image
+        if self.transform is not None:
+            img = self.transform(img)
+        # Label of image
+        label = self.labels[ind]
 
-        else:
-            # Open both the test images and the masks
-            img = Image.open(self.test_file_names[ind]).convert('RGB')
-            name = self.test_file_names[ind]
-            mask = Image.open(self.test_mask_file_names[ind])
-            #print(self.test_mask_file_names[ind])
-            # If all pixels are white in the mask the image does not have any liver cells
-            if np.mean(mask)==255:
-                label = 0
-            else:
-                label = 1
-            if self.transform is not None:
-                img = self.transform(img)
         return img, label, name
 
 if __name__ == "__main__":
-    data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver", 'train', "images_pngs",
-                               "masks_pngs")
+    data_handler = DataHandler("../train256", "images_pngs_liver", "images_pngs_noliver","train")
     batch_size = 128
     num_workers = 1
     all_labels = []
