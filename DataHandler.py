@@ -5,7 +5,6 @@ from PIL import Image
 from torchvision import transforms
 import numpy as np
 import torch
-import cv2
 from torch.utils.data.sampler import WeightedRandomSampler
 
 class TestDataHandler(Dataset):

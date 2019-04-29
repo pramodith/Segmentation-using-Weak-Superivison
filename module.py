@@ -11,11 +11,8 @@ import numpy as np
 from scipy.ndimage import zoom
 import cv2
 from sklearn.metrics import f1_score,accuracy_score
-from torchvision.transforms.functional import affine
 from torchvision.models import resnet50
-from torchsummary import summary
 from torch.utils.data.sampler import WeightedRandomSampler
-from matplotlib import pyplot as plt
 
 
 # The feature maps output from the last convolutional layer will be stored in here.
@@ -80,6 +77,7 @@ class Module(nn.Module):
 
         for i, batch in enumerate(loader):
             all_labels.extend(batch[1])
+
 
         # Find the counts of class 0 and class 1
         weights = [len(all_labels) - sum(all_labels),sum(all_labels)]
@@ -252,10 +250,10 @@ class Module(nn.Module):
 
                     # Reshape such that the number of channels is the third dimension
                     intermed_layer = intermed_layer.transpose([0, 2, 3, 1]).squeeze(0)
-
+                    print(intermed_layer.shape)
                     # Resize the feature map to match the size of the input image
-                    mat_for_mul = zoom(intermed_layer, (self.width//intermed_layer.shape[1], self.height//intermed_layer.shape[2], 1), order=1)
-
+                    mat_for_mul = zoom(intermed_layer, (self.width//intermed_layer.shape[0], self.height//intermed_layer.shape[1], 1), order=1)
+                    print(mat_for_mul.shape)
                     # Find the activation scores
                     activation_map = np.dot(mat_for_mul.reshape((self.width * self.height, 2048)), weights).reshape(self.width,self.height)
 
@@ -304,21 +302,27 @@ if __name__ == "__main__":
     parser.add_argument('--lr', action="store", default=0.0001, type=float,
                         help='The learning rate of the network')
     parser.add_argument('--batch_size', action='store', type=int, default=8,
-                        help="The learning rate of the last layer of the SRCNN")
+                        help="The batch size for training.")
     parser.add_argument('--epochs', action='store', type=int, default=50, help="The number of epochs during train time")
     parser.add_argument('--momentum', action='store', type=float, default=0.9, help= "The momentum for an optimizer")
     parser.add_argument('--width', action='store', type=int, default=256, help = 'Width of the images.')
     parser.add_argument('--height', action='store', type=int, default=256, help = 'Height of the images.')
     parser.add_argument('--save_dir', action='store', type=str, default='saved_weights', help='Directory in which weights will be saved')
+    parser.add_argument('--weights_path', action= 'store', type=str, default='saved_weights/dev_weights_epoch_22.pt',
+                        help = 'Path of the weights to be loaded during predict time.')
     parser.add_argument('--train_dir', action='store', type=str,default="../train256", help = 'Directory containing the training images')
     parser.add_argument('--test_dir', action='store', type=str, default="../test256", help = 'Directroy containing the test images')
-    parser.add_argument('--output_dir', action='store', type=str, default="../results", help = 'Directory that the output activation maps would be saved to.')
+    parser.add_argument('--ground_truth_masks_dir', action='store', type=str, default='../test256/masks_pngs', help = 'Directory containing the ground truth masks.')
+    parser.add_argument('--output_dir', action='store', type=str, default="../results", help = 'Directory that the output activation maps would be saved to')
+    parser.add_argument('--mode', action='store', choices=['train','predict'], default='predict', help='In train mode the network will be trained, in predict mode the network will use'
+                                                                                                       'the default weights to predict the pixel wise classes', required=True)
 
     args = parser.parse_args()
 
     obj = Module(width=args.width,height=args.height,save_dir=args.save_dir)
-    #obj.load_model("saved_weights/dev_weights_epoch_22.pt")
-    #obj.compute_pixel_wise_f1("../test256/masks_pngs","../content/results")
-    #obj.predict(args.test_dir,args.batch_size)
-    #obj.attention(args.test_dir, args.output_dir)
-    obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    if args.mode == 'train':
+        obj.train_model(train_dir=args.train_dir, batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+    elif args.mode == 'predict':
+        obj.load_model(args.weights_path)
+        obj.attention(args.test_dir,args.output_dir)
+        obj.compute_pixel_wise_f1(args.ground_truth_masks_dir,args.output_dir)
