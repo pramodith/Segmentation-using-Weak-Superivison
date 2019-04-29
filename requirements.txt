@@ -1,5 +1,7 @@
-opencv
+opencv-python
 torch==1.0.1
 pillow
 numpy
 torchvision
+scipy
+sklearn
