@@ -15,7 +15,10 @@ I make use of ResNet50 to obtain the required feature maps and weights to genera
 Convolutional Layer in Resnet is much smaller compared to the original image due to Max Pooling and Convolutional Operations. We can 
 perform bi-cubic interpolation to obtain the original size.
 
-I had to oversample the positive classes to ensure that the model didn't just predict absence of liver for every image.
+
+I had to oversample the positive classes to ensure that the model didn't just predict absence of liver for every image. My approach
+obtained a pixel wise F1-score of 0.18 on the test set.
+
 The output of this technique gives very rough segmentation that shows which parts of the image the network focussed the most on, in the 
 paper mentioned above they also made use of saliency maps and combined the output of saliency maps, attention scores and object
 scores to obtain an overall score for each pixel. In the interest of time I couldn't move onto creating a saliency prediction network.
