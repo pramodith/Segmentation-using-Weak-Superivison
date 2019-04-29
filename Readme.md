@@ -23,7 +23,7 @@ The output of this technique gives very rough segmentation that shows which part
 paper mentioned above they also made use of saliency maps and combined the output of saliency maps, attention scores and object
 scores to obtain an overall score for each pixel. In the interest of time I couldn't move onto creating a saliency prediction network.
 
-These are some ideas I have to further improve my results:
+*These are some ideas I have to further improve my results:
     * Use algorithms like graph cut to refine the liver pixels, graph cut can model the background and extract 
     the parts only in the foreground.
     * I can retrain the model against images that were wrongly classified to have the liver to remove False Positives.
