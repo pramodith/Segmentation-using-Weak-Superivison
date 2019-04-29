@@ -24,11 +24,11 @@ paper mentioned above they also made use of saliency maps and combined the outpu
 scores to obtain an overall score for each pixel. In the interest of time I couldn't move onto creating a saliency prediction network.
 
 These are some ideas I have to further improve my results:
-    *Use algorithms like graph cut to refine the liver pixels, graph cut can model the background and extract 
+    * Use algorithms like graph cut to refine the liver pixels, graph cut can model the background and extract 
     the parts only in the foreground.
-    *I can retrain the model against images that were wrongly classified to have the liver to remove False Positives.
-    *Used edge detection techniques to localize the location of the liver.
-    *Train a fully convolutional deep network that uses de-convolution layers to predict the scores for each pixel. The scores of each 
+    * I can retrain the model against images that were wrongly classified to have the liver to remove False Positives.
+    * Used edge detection techniques to localize the location of the liver.
+    * Train a fully convolutional deep network that uses de-convolution layers to predict the scores for each pixel. The scores of each 
     pixel can be combined to predict the overall presence and absence of the liver.
 
 ## Running the code
