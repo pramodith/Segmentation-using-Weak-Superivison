@@ -31,7 +31,7 @@ These are some ideas I have to further improve my results:
     * Train a fully convolutional deep network that uses de-convolution layers to predict the scores for each pixel. The scores of each 
     pixel can be combined to predict the overall presence and absence of the liver.
 
-##Running the code
+## Running the code
 
 Clone/Download this repositroy. The model weights will be downloaded along with the repo.
 
