@@ -16,11 +16,11 @@ from torch.utils.data.sampler import WeightedRandomSampler
 
 
 # The feature maps output from the last convolutional layer will be stored in here.
-interm_out = None
+interm_out = []
 
 # Map this hook function to the last convolutional layer of ResNET.
 def hook(module,input,output):
-    interm_out = output
+    interm_out.append(output)
 
 
 class Module(nn.Module):
@@ -221,6 +221,7 @@ class Module(nn.Module):
     # Generate the activation heat maps. Ideally the liver in an image should have high attention scores, test_dir
     # is the folder that contains all the test images
     def attention(self,test_dir,output_dir):
+        global interm_out
         data_handler = TestDataHandler(test_dir, "images_pngs", "masks_pngs")
         num_workers = 1
         batch_size = 1
@@ -247,7 +248,7 @@ class Module(nn.Module):
                     weights = self.model.fc.weight[pred].cpu().detach().numpy().squeeze(0)
                     # Extract the feature map of the last convolutional layer
                     intermed_layer = interm_out[-1].cpu().detach().numpy()
-
+                    interm_out = []
                     # Reshape such that the number of channels is the third dimension
                     intermed_layer = intermed_layer.transpose([0, 2, 3, 1]).squeeze(0)
                     print(intermed_layer.shape)
