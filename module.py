@@ -73,7 +73,7 @@ class Module(nn.Module):
         all_labels = []
 
         # Create a dataloader
-        loader = DataLoader(data_handler, batch_size, num_workers=num_workers, pin_memory=True)
+        loader = DataLoader(data_handler, batch_size, num_workers=num_workers, pin_memory=False)
 
         for i, batch in enumerate(loader):
             all_labels.extend(batch[1])
