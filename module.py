@@ -108,6 +108,8 @@ class Module(nn.Module):
         # Use the weighted sampler for training
         weighted_sampler = self.create_weighted_sampler(train_dir)
         loader = DataLoader(data_handler, batch_size,False, num_workers=num_workers, pin_memory=True, sampler=weighted_sampler)
+        dev_data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", mode='val')
+        dev_loader = DataLoader(dev_data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
 
         # Store the loss history and create variables that will store the best loss
         batch_loss_histroy = []
@@ -162,8 +164,6 @@ class Module(nn.Module):
             # Check the loss on the validation set, set to eval mode to ensure Dropout, batch norm behaves correctly
             self.eval()
             # Create data handler and data loader for validation set.
-            dev_data_handler = DataHandler(train_dir, "images_pngs_liver", "images_pngs_noliver", mode='val')
-            dev_loader = DataLoader(dev_data_handler, batch_size, True, num_workers=num_workers, pin_memory=True)
             total_dev_loss = 0
             ground_truth = []
             predictions = []
