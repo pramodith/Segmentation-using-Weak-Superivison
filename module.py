@@ -39,7 +39,7 @@ class Module(nn.Module):
         # Change the last FC layer to match the number of classes in our problem
         self.model.fc = nn.Linear(2048,2)
         # Register the hook function in order to save the intermediary feature map
-        self.model.layer4[0].conv3.register_forward_hook(hook)
+        #self.model.layer4[0].conv3.register_forward_hook(hook)
         # Initialize all weights with Xavier initialization
         self.init_weights()
 
