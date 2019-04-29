@@ -16,11 +16,11 @@ from torch.utils.data.sampler import WeightedRandomSampler
 
 
 # The feature maps output from the last convolutional layer will be stored in here.
-interm_out = []
+interm_out = None
 
 # Map this hook function to the last convolutional layer of ResNET.
 def hook(module,input,output):
-    interm_out.append(output)
+    interm_out = output
 
 
 class Module(nn.Module):
