@@ -1,6 +1,10 @@
 Weakly Supervised Semantic Segmentation
 ======================
+## Problem
+The task at hand is to leverage unsupervised learning algorithms to predict if Medical Imagery contains Liver Cells or not. The dataset is a private resource and is therefore not shared in this repository.
 
+
+## Solution
 Approach : I used a very simple approach based on generating attention maps. The idea was based off the paper Discovering Class 
 Level Pixels: https://arxiv.org/abs/1707.05821. 
 
